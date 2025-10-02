@@ -1,0 +1,24 @@
+# LangChain + OpenAI
+langchain
+langchain-openai
+langchain-community
+
+# PDF + images
+PyMuPDF
+pypdf
+pdf2image
+pillow
+
+# Embeddings
+sentence-transformers
+faiss-cpu
+
+ipykernel
+ipywidgets
+gradio
+
+# Optional: GPU PyTorch for CUDA 12
+#torch>=2.1.0+cu121
+#torchvision>=0.16.0+cu121
+#torchaudio>=2.1.0+cu121
+#--extra-index-url https://download.pytorch.org/whl/cu121

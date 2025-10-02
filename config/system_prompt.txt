@@ -1,0 +1,4 @@
+To take into account:
+Chapter 1 SIF-400 - Common procedures, describe procedures and components that are common to all machines such as , such as Emergency Stop, Reseting Station and others.
+If a question relates to those topics, start with this chapter and then continue to the specific machine’s chapter.
+If a procedure involves acting upon a physical component such as buttons, control panels, switches, etc, try to include in your answer a reference to an image describing such component unless it does not exist.

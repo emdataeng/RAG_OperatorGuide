@@ -1,0 +1,29 @@
+services:
+  rag_mvp:
+    deploy:
+        resources:
+          reservations:
+            devices:
+              - driver: nvidia
+                count: all
+                capabilities: [gpu]
+    env_file:
+      - .env
+    build:
+      context: .
+      dockerfile: docker/Dockerfile-${DEVICE:-cpu}
+      args:
+        LLM_PATH: ${LLM_PATH:-openai}
+    ports:
+      - "8888:8888" # Jupyter Notebook
+      - "7860:7860" # Gradio App
+    container_name: rag_mvp    
+    volumes:
+      - .:/home/jovyan/RAG_OperatorGuide  # Mount entire project folder
+    working_dir: /home/jovyan/RAG_OperatorGuide  # Set working directory    
+    stdin_open: true
+    tty: true
+    environment:    
+      JUPYTER_ENABLE_LAB: "yes"
+    user: root  # Start as root to change ownership
+    command: start-notebook.sh --NotebookApp.token='' --NotebookApp.password=''
