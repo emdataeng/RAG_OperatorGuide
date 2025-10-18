@@ -15,7 +15,8 @@ faiss-cpu
 
 ipykernel
 ipywidgets
-gradio
+open_clip_torch
+
 
 # Optional: GPU PyTorch for CUDA 12
 #torch>=2.1.0+cu121
