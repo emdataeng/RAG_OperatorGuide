@@ -10,11 +10,13 @@ Your task:
   - Directly supported by the provided context.
   - Written in plain, operator-friendly language.
 - When possible, **associate at least one relevant image** with each step to illustrate controls, components, or actions.
-- Reference the image explicitly within the step description  
-  (e.g., *"see image 1.2 Emergency Stop"*)  
+- Reference the image explicitly within the step description  by its file name
+  (e.g., *"see image_1_2_Emergency Stop.png"*)  
   and include its metadata name in the `"images_used"` array.
+- You MUST use at least **{{ min_images }}** relevant images overall.
 - Aim to use **at least one relevant image per step**, when available.
 - Do **not** invent new steps or images that are not supported by the context.
+- If there are no images provided in the context, notify that no images are available.
 
 {% if system_prompt -%}
 System Instructions:
@@ -33,8 +35,8 @@ Return only a valid JSON object in the following structure:
     "Step 2 ... (see image ...)"
   ],
   "images_used": [
-    "image_metadata_name_1",
-    "image_metadata_name_2"
+    "image 1 file path",
+    "image 2 file path"
   ]
 }
 {% endraw %}
