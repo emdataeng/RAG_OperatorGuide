@@ -1,29 +1,57 @@
 services:
+  # --- Base service for notebooks and RAG backend ---
   rag_mvp:
-    deploy:
-        resources:
-          reservations:
-            devices:
-              - driver: nvidia
-                count: all
-                capabilities: [gpu]
-    env_file:
-      - .env
+    image: rag_operator_guide:latest            # Shared image name
     build:
       context: .
       dockerfile: docker/Dockerfile-${DEVICE:-cpu}
       args:
         LLM_PATH: ${LLM_PATH:-openai}
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    env_file:
+      - .env
     ports:
-      - "8888:8888" # Jupyter Notebook
-      - "7860:7860" # Gradio App
-    container_name: rag_mvp    
+      - "8888:8888"  # Jupyter Notebook
+      - "7860:7860"  # Gradio App
+    container_name: rag_mvp
     volumes:
       - .:/home/jovyan/RAG_OperatorGuide  # Mount entire project folder
-    working_dir: /home/jovyan/RAG_OperatorGuide  # Set working directory    
+    working_dir: /home/jovyan/RAG_OperatorGuide
     stdin_open: true
     tty: true
-    environment:    
+    environment:
       JUPYTER_ENABLE_LAB: "yes"
-    user: root  # Start as root to change ownership
+    user: root
     command: start-notebook.sh --NotebookApp.token='' --NotebookApp.password=''
+
+  # --- Chainlit Front-End using the SAME image ---
+  rag-assistant:
+    image: rag_operator_guide:latest            # Reuses the same built image
+    command: chainlit run app.py --port 8000 --host 0.0.0.0
+    ports:
+      - "8000:8000"  # Chainlit Chat UI
+    container_name: rag_chainlit
+    volumes:
+      - .:/home/jovyan/RAG_OperatorGuide
+      - ./artifacts:/home/jovyan/RAG_OperatorGuide/artifacts
+    working_dir: /home/jovyan/RAG_OperatorGuide
+    stdin_open: true
+    tty: true
+    depends_on:
+      - rag_mvp
+    user: root
+    env_file:
+      - .env
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

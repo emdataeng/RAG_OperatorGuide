@@ -1,82 +1,195 @@
 # RAG Operator Guide
 
-This repository provides a minimal but complete retrieval-augmented generation (RAG) workflow to help shop-floor operators query complex machine manuals. The pipeline pairs text chunks and visual references from PDF documentation with a language model that returns step-by-step procedures enriched with relevant imagery.
+A Retrieval-Augmented Generation (RAG) assistant for industrial machine operators.  
+It indexes official manuals, links relevant imagery, and serves step-by-step procedures through a Chainlit chat UI backed by a shared Dockerized environment.
+
+---
+
+## Overview
+
+The project runs two coordinated services from a single Docker image:
+
+- **`rag_mvp`** – a Jupyter/Gradio workspace for developing and monitoring the RAG pipeline.  
+- **`rag-assistant`** – a Chainlit front end that calls `rag_backend.answer_query` to serve image-supported instructions in real time.
+
+Both services mount the repository into `/home/jovyan/RAG_OperatorGuide`, read the same `.env` configuration, and share artifacts such as FAISS indexes, image catalogs, and logs.
+
+---
 
 ## Features
-- Parses a PDF manual, extracting both text and deduplicated RGB images while filtering out boilerplate.
-- Builds separate FAISS indexes for text (MiniLM) and images (CLIP) to support mixed-modality retrieval.
-- Ranks candidate images for each query and guarantees every instruction step references at least one relevant visual.
-- Generates structured JSON instructions through a safety-oriented prompt rendered with Jinja templates.
-- Ships with Docker configurations for CPU or GPU inference and an example notebook for experimentation.
 
-## Repository Layout
-- `main.py` – end-to-end RAG pipeline orchestrating PDF processing, retrieval, prompting, and display.
-- `data/` – sample manuals and the extracted page images created during indexing.
-- `config/system_prompt.txt` – optional safety rules injected into the operator prompt.
-- `templates/operator_prompt.j2` – Jinja template defining the LLM output contract.
-- `docker/` – CPU and CUDA Dockerfiles used by `docker-compose.yml`.
-- `requirements_openai.txt` – Python dependencies for running against OpenAI endpoints.
-- `MVP_starting_machine_v3 copy.ipynb` – exploratory notebook showcasing the workflow interactively.
+- Retrieval pipeline that parses manuals, deduplicates imagery, and maintains text and vision FAISS indexes.  
+- `answer_query` orchestrates retrieval, prompt rendering, and structured JSON generation via OpenAI-compatible LLMs.  
+- Chainlit chat interface delivers numbered instructions with inline component images.  
+- Notebook-friendly environment for rapid experimentation and debugging.  
+- Optional GPU support by selecting CUDA builds at compose time.
+
+---
+
+## Architecture
+
+| Component | Role | Notes |
+|-----------|------|-------|
+| `rag_backend.py` | Core RAG engine implementing ingestion, retrieval, cataloging, and prompting. | Driven by environment variables defined in `.env`. |
+| `app.py` | Chainlit entry point. | Calls `answer_query`, formats JSON responses, streams inline images. |
+| `docker-compose.yml` | Orchestrates the shared image for notebooks and Chainlit. | Select CPU/GPU via the `DEVICE` environment variable. |
+| `templates/operator_prompt.j2` | Jinja2 prompt enforcing structured, multimodal output. | Updated JSON contract reflected in the Chainlit UI. |
+| `config/system_prompt.txt` | Optional guardrails and domain rules injected into the LLM. | Leave empty for no extra system instructions. |
+
+The backend keeps intermediate assets under `artifacts/` (embeddings, catalogs, extracted images) and reads manuals from `data/`.
+
+---
+
+## Project Structure
+
+```
+RAG_OperatorGuide/
+├── app.py
+├── rag_backend.py
+├── docker-compose.yml
+├── templates/
+│   └── operator_prompt.j2
+├── config/
+│   └── system_prompt.txt
+├── artifacts/               # Generated catalogs, FAISS stores, extracted imagery
+├── data/                    # Source manuals and operator documents
+├── notebooks/
+│   └── RAG_Operator_Guide.ipynb
+├── docker/
+│   ├── Dockerfile-cpu
+│   ├── Dockerfile-cuda11
+│   └── Dockerfile-cuda12
+└── requirements_openai.txt
+```
+
+---
 
 ## Prerequisites
-- Python 3.10+ recommended.
-- An OpenAI API key exported as the `OPENAI_API_KEY` environment variable.
-- (Optional) NVIDIA drivers and Docker with GPU support if you plan to use the CUDA images.
 
-Install dependencies and prepare the environment:
+- Docker and Docker Compose.  
+- Valid OpenAI API key (or compatible endpoint) with network access from the containers.  
+- Optional: NVIDIA GPU drivers and [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) for CUDA builds.
 
-```bash
-python -m venv .venv
-source .venv/bin/activate  # On Windows use: .venv\Scripts\activate
-pip install -r requirements_openai.txt
-export OPENAI_API_KEY=sk-...
-```
+---
 
-## Running the Pipeline
-1. Place the target PDF manual in the `data/` directory and update the `PDF_PATH`, `MACHINE_NAME`, and `TOP_K` constants near the top of `main.py` as needed.
-2. (Optional) Adjust `config/system_prompt.txt` to steer the assistant’s tone or ordering of procedures.
-3. Execute the script:
+## Configure the Environment
+
+All runtime settings are pulled from `.env`. At minimum provide the OpenAI credentials and core directories:
 
 ```bash
-python main.py
+# .env (example)
+OPENAI_API_KEY=sk-...
+MACHINE_NAMES=SIF-400,SIF-410
+DEFAULT_MACHINE_NAME=SIF-400
+PDF_DIR=artifacts/manuals
+OUT_DIR=artifacts
+IMAGES_DIR_NAME=images
+CATALOG_JSON=artifacts/catalog.json
+TEMPLATES_DIR=templates
+PATH_SYSTEM_PROMPT=config/system_prompt.txt
+LLM_MODEL=gpt-4o-mini
+LLM_TEMPERATURE=0.2
+TOP_K=6
+IMAGE_BOOST=1.4
+DIMS=768
+DEVICE=cpu        # or cuda11 / cuda12
+HF_HOME=/home/jovyan/.cache/huggingface
+TRANSFORMERS_CACHE=/home/jovyan/.cache/huggingface/transformers
+HUGGINGFACE_HUB_CACHE=/home/jovyan/.cache/huggingface/hub
 ```
 
-The first run extracts images to `data/page##_img#.ext`, builds FAISS indexes, and prints the count of indexed text chunks and visuals. The `ask` helper is then called with a sample query (customize it or import `ask` from another script or notebook).
+Adjust paths to match where manuals and artifacts should be stored inside the container volume.
 
-During execution the pipeline:
-1. Retrieves top-k text passages and associated images for the query.
-2. Re-ranks images with a CLIP similarity search to keep only the most relevant visuals.
-3. Builds an image catalog and renders a Jinja prompt that forces JSON output.
-4. Calls `ChatOpenAI` (`gpt-4o-mini`) and parses the structured response.
-5. Attaches missing images heuristically and prints each step with file paths for quick reference.
+---
 
-## Configuration Notes
-- **Prompting:** Edit `templates/operator_prompt.j2` to change the JSON schema or instructions. The system prompt file is optional; an empty file results in no extra injection.
-- **Image filtering:** Tweak `min_size`, `ignore_top_pct`, `ignore_bottom_pct`, or the duplicate filtering logic inside `load_pdf` to adapt to new manuals.
-- **Retrieval:** Adjust `TOP_K` or the FAISS index type if you need cosine similarity or IVF-based scaling.
-- **Post-processing:** The `auto_attach_images` function uses cosine similarity between step text and image embeddings; update `sim_thresh` to be more permissive or strict.
-
-## Docker & Compose
-The provided `docker-compose.yml` launches a JupyterLab container and (optionally) a Gradio interface:
+## Build the Shared Image
 
 ```bash
-# CPU build (default)
-docker compose up --build
-
-# CUDA build (set DEVICE=cuda11 or DEVICE=cuda12 before running compose)
-DEVICE=cuda12 docker compose up --build
+# Clean rebuild for the selected DEVICE (defaults to cpu)
+docker compose build --no-cache
 ```
 
-Mounts map the entire project into `/home/jovyan/RAG_OperatorGuide`, so edits on the host are reflected in the container. Add your `.env` file with `OPENAI_API_KEY` (and any other secrets) before starting the stack.
+This installs Python dependencies such as `langchain`, `chainlit`, `openai`, `faiss`, and OpenCLIP.
 
-## Working with the Notebook
-Launch `MVP_starting_machine_v3 copy.ipynb` through JupyterLab (port `8888`) to experiment interactively. The notebook mirrors the logic in `main.py` but offers cells for inspecting intermediate embeddings, FAISS searches, and prompt outputs.
+---
 
-## Troubleshooting
-- Ensure `OPENAI_API_KEY` is available in the environment where the script or container runs; the code raises a `ValueError` otherwise.
-- If FAISS fails to load, verify that `faiss-cpu` matches your Python version and reinstall within a clean virtual environment.
-- Image extraction saves files next to the PDF; confirm the `data/` directory is writable.
-- For GPU runs, confirm that the NVIDIA Container Toolkit is installed and the host exposes GPUs to Docker.
+## Run the Services
 
-## License
-Distributed under the terms of the repository’s `LICENSE`.
+```bash
+docker compose up
+```
+
+Access the interfaces:
+
+- JupyterLab / Gradio backend: <http://localhost:8888>  
+- Chainlit assistant: <http://localhost:8000>
+
+Both services hot-reload source code because the project directory is bind-mounted into the containers.
+
+---
+
+## Using the Chainlit Assistant
+
+1. Browse to <http://localhost:8000>.  
+2. Ask an operator-focused question, e.g. `I see a red warning on the SIF-400 panel. What should I do?`  
+3. `answer_query` retrieves relevant text and imagery, renders the `operator_prompt.j2` template, and returns JSON with ordered steps plus `images_used`.  
+4. Chainlit formats the steps as Markdown and displays inline thumbnails for each referenced image.
+
+---
+
+## Working with Manuals and Artifacts
+
+- Place PDFs in the directory specified by `PDF_DIR`.  
+- On first run the backend extracts deduplicated images, builds FAISS indexes (text + vision), and writes a consolidated catalog to `CATALOG_JSON`.  
+- Generated assets land under `artifacts/` and are reused across sessions until the source manuals change.  
+- Set `MACHINE_NAMES` in `.env` to control which catalog entries are exposed to the assistant.
+
+---
+
+## Development Tips
+
+- The repository is mounted into the containers, so edits to Python files refresh immediately.  
+- Tail the Chainlit logs: `docker compose logs -f rag-assistant`.  
+- Inspect backend traces in `logs/debug_log_*.jsonl` (created per session).  
+- Use the notebook at `/home/jovyan/RAG_OperatorGuide/notebooks/RAG_Operator_Guide.ipynb` for deeper debugging or ad-hoc queries.
+
+---
+
+## Prompt Design
+
+`templates/operator_prompt.j2` enforces a structured response:
+
+```json
+{
+  "query": "Operator question",
+  "steps": [
+    {"title": "Prepare the station", "instruction": "Isolate power..."}
+  ],
+  "images_used": [
+    {"path": "artifacts/images/sif-400_panel.jpg", "name": "Panel overview"}
+  ]
+}
+```
+
+Modify the template or `config/system_prompt.txt` to adjust JSON contracts, tone, or compliance requirements.
+
+---
+
+## Stopping the Stack
+
+```bash
+docker compose down
+```
+
+Add `-v` to remove named volumes if you purposefully want a clean slate.
+
+---
+
+## Component Summary
+
+| Service | Description | URL |
+|---------|-------------|-----|
+| `rag_mvp` | Notebook & backend workspace | <http://localhost:8888> |
+| `rag-assistant` | Chainlit chat interface | <http://localhost:8000> |
+
+**RAG Operator Guide** brings multimodal, procedure-focused assistance directly from official manuals to the shop floor.
