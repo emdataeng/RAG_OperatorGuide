@@ -43,3 +43,7 @@ data/
 *.pkl
 *.h5
 *.pdf
+
+#Artifacts
+artifacts/
+*.png
