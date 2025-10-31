@@ -24,7 +24,8 @@ ANSWER_QUERY_ASYNC = cl.make_async(answer_query)
 async def on_chat_start() -> None:
     """Send a quick greeting when the session starts."""
     await cl.Message(
-        content="RAG Operator Guide assistant ready. Ask a question about the station."
+        content=f"RAG Operator Guide assistant ready. Ask a question about the station. \n"
+                f"Example: I'm using station SIF402 and I want to fill a square container with blue pellets. What steps do I need to follow?"
     ).send()
 
 

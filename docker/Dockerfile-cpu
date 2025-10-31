@@ -23,5 +23,12 @@ RUN pip install --no-cache-dir --index-url 'https://download.pytorch.org/whl/cpu
 COPY .. "/home/${NB_USER}"
 RUN pip install -r requirements_${LLM_PATH}.txt
 
+# --- To start the backend script  ---
+USER root
+COPY ./start_all.sh /home/${NB_USER}/RAG_OperatorGuide/start_all.sh
+RUN chmod +x /home/${NB_USER}/RAG_OperatorGuide/start_all.sh
+USER ${NB_USER}
+# ------------------------------
+
 EXPOSE 7860
 ENV GRADIO_SERVER_NAME="0.0.0.0"

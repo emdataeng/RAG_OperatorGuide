@@ -121,8 +121,6 @@ os.environ["HF_HOME"] = env_get("HF_HOME", cast=str)
 os.environ["TRANSFORMERS_CACHE"] = env_get("TRANSFORMERS_CACHE", cast=str)
 os.environ["HUGGINGFACE_HUB_CACHE"] = env_get("HUGGINGFACE_HUB_CACHE", cast=str)
 
-print(f"Loaded {len(MACHINE_NAMES)} machine names. Primary: {MACHINE_NAME}")
-
 
 ## 2. Utilities
 import json
@@ -422,8 +420,6 @@ def run_extraction(pdf_dir: str, out_dir: str, images_dir_name: str, catalog_jso
 import os
 import numpy as np
 
-# Confirm effective cache directory
-print("Hugging Face cache directory:", os.environ["HF_HOME"])
 
 # Lazy import to avoid failures if packages aren't installed yet
 def load_openclip(model_name: str, pretrained: str, device: str="cpu"):
@@ -713,22 +709,24 @@ def compose_json_plan(query: str, search_out: Dict[str, Any], max_images: int = 
 # plan
 
 
-## 8. End-to-End Runner
+## 8. Builds the PDF Extraction, parsing and Embeddings Index Creation: 
 
-def build_all(cfg: Config):
+def build_all(cfg: Config, machines_list: List):
     catalog_path = os.path.join(cfg.out_dir, cfg.catalog_json)
     _ = run_extraction(
         cfg.pdf_dir,
         cfg.out_dir,
         cfg.images_dir_name,
         cfg.catalog_json,
-        MACHINE_NAMES=MACHINE_NAMES,
+        MACHINE_NAMES=machines_list,
         ignore_bottom_pct=0.1,
         ignore_top_pct=0.1,
     )
     idx_paths = build_indices(catalog_path, cfg)
     return idx_paths
 
+
+### 8.1 End-to-End Runner TEST
 
 def retrieve_plan(query: str, cfg: Config, top_k: int=10, max_images: int=4):
     search_out = search(query, cfg, top_k=top_k)
@@ -750,15 +748,6 @@ def retrieve_plan(query: str, cfg: Config, top_k: int=10, max_images: int=4):
     )
 
     return plan
-
-#For DEBUGGING:
-#print("To run:")
-#print("1) Put PDFs in:", cfg.pdf_dir)
-#print(f"2) {build_all(cfg)} # may take time")
-#print(f"3) {retrieve_plan('Emergency stop procedure for station X', cfg)}")
-#query =f"I see in the panel in {MACHINE_NAME} a message: 'Please refill red pellets', what should I do?"
-#plan = retrieve_plan(query, cfg)
-#print(f"3) {plan}")
 
 
 ## 9. Build a context that merges text + image info
@@ -943,4 +932,22 @@ def answer_query(query: str)-> str:
             pass  # leave as-is if still invalid
 
     return raw_answer
+
+if __name__ == "__main__":
+    print(f"Loaded {len(MACHINE_NAMES)} machine names. Primary: {MACHINE_NAME}")
+    
+    # Confirm effective cache directory
+    print("Hugging Face cache directory:", os.environ["HF_HOME"])
+
+    print(f"2) {build_all(cfg, MACHINE_NAMES)} # may take time")
+
+    #For DEBUGGING:
+    #print("To run:")
+    #print("1) Put PDFs in:", cfg.pdf_dir)
+    #print(f"2) {build_all(cfg)} # may take time")
+    #print(f"3) {retrieve_plan('Emergency stop procedure for station X', cfg)}")
+    #query =f"I see in the panel in {MACHINE_NAME} a message: 'Please refill red pellets', what should I do?"
+    #query =f"What can you tell me about machine SIF401?"
+    #plan = retrieve_plan(query, cfg)
+    #print(f"3) {plan}")
 

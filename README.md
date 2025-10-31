@@ -9,7 +9,7 @@ It indexes official manuals, links relevant imagery, and serves step-by-step pro
 
 The project runs two coordinated services from a single Docker image:
 
-- **`rag_mvp`** – a Jupyter/Gradio workspace for developing and monitoring the RAG pipeline.  
+- **`rag_mvp`** – a Jupyter/Gradio workspace for developing and monitoring the RAG pipeline, the `rag_backend.py` is deployed here and the notebook `RAG_Operator_Guide.ipynb` is also available. 
 - **`rag-assistant`** – a Chainlit front end that calls `rag_backend.answer_query` to serve image-supported instructions in real time.
 
 Both services mount the repository into `/home/jovyan/RAG_OperatorGuide`, read the same `.env` configuration, and share artifacts such as FAISS indexes, image catalogs, and logs.
