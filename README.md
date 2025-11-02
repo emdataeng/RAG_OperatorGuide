@@ -196,7 +196,7 @@ Add `-v` to remove named volumes if you purposefully want a clean slate.
 ## RAG Operator Guide interface screenshots
 Bringing multimodal, procedure-focused assistance directly from official manuals to the shop floor.
 
-![Interface start](./images/Chat_Interface.png)
+![Interface start](./images/Chat_Interface.jpg)
 
 
 Examples with coherent results:
