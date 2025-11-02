@@ -122,7 +122,7 @@ docker compose up
 Access the interfaces:
 
 - JupyterLab / Gradio backend: <http://localhost:8888>  
-- Chainlit assistant: <http://localhost:8000>
+- Chainlit assistant: <http://127.0.0.1:8000/> or <http://localhost:8000>
 
 Both services hot-reload source code because the project directory is bind-mounted into the containers.
 
@@ -190,6 +190,28 @@ Add `-v` to remove named volumes if you purposefully want a clean slate.
 | Service | Description | URL |
 |---------|-------------|-----|
 | `rag_mvp` | Notebook & backend workspace | <http://localhost:8888> |
-| `rag-assistant` | Chainlit chat interface | <http://localhost:8000> |
+| `rag-assistant` | Chainlit chat interface | <http://127.0.0.1:8000/> or <http://localhost:8000> |
 
-**RAG Operator Guide** brings multimodal, procedure-focused assistance directly from official manuals to the shop floor.
+
+## RAG Operator Guide interface screenshots
+Bringing multimodal, procedure-focused assistance directly from official manuals to the shop floor.
+
+![Interface start](./images/Chat_Interface.png)
+
+
+Examples with coherent results:
+
+Text answer is coherent to the question and images corresponds to the answer.
+
+![Interface Screenshot Good 1](./images/Good1.jpg)
+
+![Interface Screenshot Good 2](./images/Good2.jpg)
+
+![Interface Screenshot Good 3](./images/Good3.jpg)
+
+
+Examples with sub-optimal results:
+
+In this example, the first image does not correspond to the answer.
+![Interface Screenshot Bas 1](./images/Bad1.jpg)
+
